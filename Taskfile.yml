@@ -6,6 +6,11 @@ tasks:
   build:
     cmds:
       - protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative proto/event.proto
+  sources:
+    - proto/*.proto
+  generates:
+    - proto/*.pb.go
+
   dev:spin:
     cmds:
       - task dev:down
@@ -25,3 +30,12 @@ tasks:
     deps: [build]
     cmds:
       - go run ./api/*.go
+
+  backend:up:
+    deps: [build]
+    cmds:
+      - task pub-sub:up api:up -p
+
+  default:
+    cmds:
+    - task backend:up
