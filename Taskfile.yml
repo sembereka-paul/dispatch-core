@@ -24,4 +24,4 @@ tasks:
   api:up:
     deps: [build]
     cmds:
-      - go run ./api/main.go
+      - go run ./api/*.go
