@@ -2,10 +2,12 @@ package main
 
 import (
 	"log"
+	"os"
 	"time"
 
 	pb "coop/proto"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -24,6 +26,10 @@ type EventMessage struct {
 var eventMessage = make(chan EventMessage, 1)
 var subTag = make(chan string)
 
+var (
+	ENV = os.Getenv("ENV")
+)
+
 func main() {
 	conn, err := grpc.NewClient(
 		"localhost:50052",
@@ -39,6 +45,15 @@ func main() {
 	go messageDispatcher()
 
 	r := gin.Default()
+
+	if ENV == "development" {
+		r.Use(cors.New(cors.Config{
+			AllowAllOrigins:  true,
+			AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+			AllowHeaders:     []string{"*"},
+			AllowCredentials: false,
+		}))
+	}
 	r.GET("/notifications/:id", SSEHandler)
 	r.Run(":8080")
 }
