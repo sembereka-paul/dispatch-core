@@ -20,3 +20,8 @@ tasks:
     deps: [build]
     cmds:
       - go run ./pub-sub/main.go
+
+  api:up:
+    deps: [build]
+    cmds:
+      - go run ./api/main.go

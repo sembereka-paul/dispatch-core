@@ -1,6 +1,7 @@
 Task list: 
 - [x] setup mastodon dev dependencies, self-host
-- [ ] create aggregator service that subscribes to mastodons events and updates the sse service
-- [ ] create an sse service that will be responsible for providing live updates to our end users
+- [x] setup a pub-sub service that handles mastodon subscriptions
+- [x] create an sse service that will be responsible for providing live updates to our end users
+- [ ] refactor and clean up api/sse service
 - [ ] maybe simulate mastodon posts.
 - [ ] front-end dashboard for visually showing updates
