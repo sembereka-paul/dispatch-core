@@ -1,0 +1,14 @@
+# https://taskfile.dev
+
+version: "3"
+
+tasks:
+  dev:spin:
+    cmds:
+      - task dev:down
+      - sleep 1
+      - docker-compose up -d
+
+  dev:down:
+    cmds:
+      - docker-compose down
