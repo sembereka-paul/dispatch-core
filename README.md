@@ -13,8 +13,15 @@ From the repository root, run:
 protoc --go_out=. \
     --go_opt=paths=source_relative \
     --go-grpc_out=. \
-    --go-grpc_opt=paths=source_relative coop/event.proto
+    --go-grpc_opt=paths=source_relative proto/event.proto
 ```
+### Quick start
+1. Clone the repository
+```
+git clone https://github.com/sembereka-paul/dispatch-core.git
+```
+2. Run `go mod tidy`. It's optional to run it in `api` or `pub-sub` directories only.
+3. Run `task backend:up` or (just `task`) to run `pub-sub` and `api` in parallel.
 
 #### Running the services together
 Run `task backend:up` or (just `task`) to run `pub-sub` and `api` in parallel
@@ -57,4 +64,3 @@ Two services stream data between them:
 +-----------+            +---------------+               +------------------+               +----------+
                       
 ````
-
