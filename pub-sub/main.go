@@ -56,14 +56,6 @@ func (s *server) Sub(in *pb.SubscribeRequest, stream pb.Event_SubServer) error {
 	return nil
 }
 
-func pub(msg Message) {
-	out <- pb.EventReply{
-		Event: msg.event,
-		Data:  msg.data,
-		Tag:   msg.tag,
-	}
-}
-
 func processLine(scanner *bufio.Scanner) (string, string, error) {
 	if !scanner.Scan() {
 		if err := scanner.Err(); err != nil {
@@ -83,62 +75,73 @@ var (
 	MASTODON_ACCESS_TOKEN = os.Getenv("MASTODON_ACCESS_TOKEN")
 )
 
+// Managens a single subscription to ta tag
+// take the subscription name as sub and an out channel to write to.
+func subscriptionWorker(sub string, out chan<- pb.EventReply) {
+	req, err := http.NewRequest("GET", MASTODON_BASE_URL+"/api/v1/streaming/hashtag?tag="+sub, nil)
+	if err != nil {
+		return
+	}
+
+	req.Header.Set("Accept", "text/event-stream")
+	req.Header.Set("Authorization", "Bearer "+MASTODON_ACCESS_TOKEN)
+
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	client := &http.Client{Transport: tr, Timeout: 0}
+	resp, err := client.Do(req)
+	if err != nil {
+		fmt.Println(err)
+		fmt.Println("Error")
+		return
+	}
+
+	scanner := bufio.NewScanner(resp.Body)
+
+	// attempt reading pairs
+	// first find key, then look for value
+	next := ""
+	msg := Message{}
+	for {
+		if !scanner.Scan() {
+			if err := scanner.Err(); err != nil {
+				log.Println("Error reading line", err)
+				break
+			}
+		}
+		first := scanner.Text()
+		field, data := parseLine(first)
+		if next == "" && field == "event" {
+			fmt.Println(field, data)
+			msg.event = data
+			next = "data"
+		} else if next == "data" && field == "data" {
+			fmt.Println(field, data)
+			msg.data = data
+			next = ""
+		}
+
+		if msg.data != "" {
+			msg.tag = sub
+
+			out <- pb.EventReply{
+				Event: msg.event,
+				Data:  msg.data,
+				Tag:   msg.tag,
+			}
+			msg = Message{}
+		}
+	}
+}
+
 func main() {
+	defer close(tag)
+	defer close(out)
+
 	go func() {
 		for sub := range tag {
-			go func() {
-				req, err := http.NewRequest("GET", MASTODON_BASE_URL+"/api/v1/streaming/hashtag?tag="+sub, nil)
-				if err != nil {
-					return
-				}
-
-				req.Header.Set("Accept", "text/event-stream")
-				req.Header.Set("Authorization", "Bearer "+MASTODON_ACCESS_TOKEN)
-
-				tr := &http.Transport{
-					TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-				}
-				client := &http.Client{Transport: tr, Timeout: 0}
-				resp, err := client.Do(req)
-				if err != nil {
-					fmt.Println(err)
-					fmt.Println("Error")
-					return
-				}
-
-				scanner := bufio.NewScanner(resp.Body)
-
-				// attempt reading pairs
-				// first find key, then look for value
-				next := ""
-				msg := Message{}
-				for {
-					if !scanner.Scan() {
-						if err := scanner.Err(); err != nil {
-							log.Println("Error reading line", err)
-							break
-						}
-					}
-					first := scanner.Text()
-					field, data := parseLine(first)
-					if next == "" && field == "event" {
-						fmt.Println(field, data)
-						msg.event = data
-						next = "data"
-					} else if next == "data" && field == "data" {
-						fmt.Println(field, data)
-						msg.data = data
-						next = ""
-					}
-
-					if msg.data != "" {
-						msg.tag = sub
-						pub(msg)
-						// emit(c, msg)
-						msg = Message{}
-					}
-				}
-			}()
+			go subscriptionWorker(sub, out)
 		}
 	}()
 
