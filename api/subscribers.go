@@ -45,7 +45,7 @@ func maybeRemoveSubscription(name string) {
 }
 
 // subscribe
-func sub(c pb.EventClient, tag string) error {
+func sub(c pb.EventClient, tag string, eventMessage chan<- EventMessage) error {
 	defer maybeRemoveSubscription(tag)
 
 	addSubscription(tag)
