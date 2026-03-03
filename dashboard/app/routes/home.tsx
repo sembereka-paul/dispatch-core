@@ -1,152 +1,110 @@
+import React from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "~/components/ui/card";
 import { useEffect, useLayoutEffect, useState } from "react";
-import { Heart, Repeat, Reply } from "lucide-react";
+import { Button } from "~/components/ui/button"
+import { Field } from "~/components/ui/field"
+import { Input } from "~/components/ui/input"
+import { BrushCleaning, Heart, Repeat, Reply } from "lucide-react";
+import { useEventSourcing } from "~/use-event-sourcing";
+import type { Post } from "~/schema";
 
-export type Account = {
-  id: string;
-  username?: string;
-  acct?: string;
-  display_name?: string;
-  url?: string;
-  avatar?: string;
-  avatar_static?: string;
-  header?: string;
-  header_static?: string;
-  locked?: boolean;
-  bot?: boolean;
-  created_at?: string;
-  note?: string;
-};
-
-export type MediaAttachment = {
-  id: string;
-  type: string;
-  url?: string;
-  preview_url?: string;
-  remote_url?: string | null;
-  text_url?: string;
-  description?: string | null;
-};
-
-export type Mention = {
-  id: string;
-  username: string;
-  url: string;
-  acct: string;
-};
-
-export type Tag = {
-  name: string;
-  url: string;
-};
-
-export type Application = {
-  name?: string;
-  website?: string | null;
-};
-export type Post = {
-  id: string;
-  created_at: string;
-  in_reply_to_id: string | null;
-  in_reply_to_account_id: string | null;
-  sensitive: boolean;
-  spoiler_text: string;
-  visibility: 'public' | 'unlisted' | 'private' | 'direct' | string;
-  language: string | null;
-  uri: string;
-  url: string | null;
-  replies_count?: number;
-  reblogs_count?: number;
-  favourites_count?: number;
-  favourited?: boolean | null;
-  reblogged?: boolean | null;
-  muted?: boolean | null;
-  bookmarked?: boolean | null;
-  pinned?: boolean | null;
-  content?: string;
-  filtered?: any[];
-  account?: Account;
-  media_attachments?: MediaAttachment[];
-  mentions?: Mention[];
-  tags?: Tag[];
-  application?: Application | null;
-};
 export default function Home() {
-  const data = useEventSourcing()
+  const [tag, setTag] = useState<string | undefined>()
+  const { data, trackTag } = useEventSourcing()
+  const [posts, setPosts] = useState<Post[]>([])
+
+  const [tracked, setTracked] = useState(new Set<string>())
 
   useEffect(() => {
-    console.log(data, 'hehe')
+    if (!data) return
+    setPosts(old => [data, ...old])
   }, [data])
+
+  useEffect(() => {
+    if (!tracked.size) setPosts([])
+  }, [tracked])
+
+  const handleTracking = () => {
+    if (!tag) return
+    trackTag(tag)
+    setTracked(new Set([...tracked, tag]))
+  }
+
+  const handleClear = () => {
+    setTag('')
+    setTracked(new Set())
+  }
+
+  const renderNowTracking = () => {
+    if (!tracked.size) return
+
+    let tags = ''
+    tracked.forEach(v => tags = tags + ` #${v}`)
+
+    return <div className="pt-2 text-center text-gray-500" >
+      <span>now tracking {tags?.trim()}</span>
+    </div>
+  }
 
   return <>
     <div>
-      <div className="flex flex-cols py-4 justify-center">
+      <div className="flex py-4 mb-4 justify-center">
+        <div className="w-80">
+          <Field orientation="horizontal">
+            <Input onChange={(e) => setTag(e.target.value)} value={tag} type="text" placeholder="Enter tag..." />
+            <Button onClick={handleTracking} disabled={!tag} className="cursor-pointer">Track</Button>
+            <Button disabled={!tracked.size && !tag} onClick={handleClear} className="cursor-pointer text-red-700 bg-red-100">clear</Button>
+          </Field>
+          {renderNowTracking()}
+        </div>
+      </div>
+      <div className="py-4 justify-center">
+        {posts.map(post => {
+          return <React.Fragment key={post.id}>
+            < Card size="sm" className="py-2 my-2 mx-auto w-full max-w-sm">
+              <CardHeader>
+                <CardTitle>{post.account?.display_name}</CardTitle>
+                <CardDescription>@{post.account?.username}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div dangerouslySetInnerHTML={{ __html: post.content! }} />
+              </CardContent>
+              <CardFooter className="flex flex-cols justify-between gap-2">
+                <div>
+                  <span className="flex flex-cols align-center gap-1">
+                    <Reply size={22}></Reply>
+                    {post.replies_count}
+                  </span>
 
-        {data &&
-          <Card size="sm" className="mx-auto w-full max-w-sm">
-            <CardHeader>
-              <CardTitle>{data.account?.display_name}</CardTitle>
-              <CardDescription>@{data.account?.username}</CardDescription>
-              {/* <CardAction>Card Action</CardAction> */}
-            </CardHeader>
-            <CardContent>
-              <div dangerouslySetInnerHTML={{ __html: data.content! }} />
-            </CardContent>
-            <CardFooter className="flex flex-cols justify-between gap-2">
-              <div>
-                <span className="flex flex-cols align-center gap-1">
-                  <Reply size={22}></Reply>
-                  {data.replies_count}
-                </span>
+                </div>
+                <div>
+                  <span className="flex flex-cols align-center gap-1">
+                    <Repeat size={22}></Repeat>
+                    {post.reblogs_count}
+                  </span>
+                </div>
+                <div>
+                  <span className="flex flex-cols align-center gap-1">
+                    <Heart size={22}></Heart>
+                    {post.favourites_count}
+                  </span>
+                </div>
+              </CardFooter>
+            </Card>
+          </React.Fragment>
+        })
+        }
+        {posts.length === 0 && <div className="w-80 m-10 m-auto">
+          <div className="flex justify-center">
+            <BrushCleaning></BrushCleaning>
 
-              </div>
-              <div>
-                <span className="flex flex-cols align-center gap-1">
-                  <Repeat size={22}></Repeat>
-                  {data.reblogs_count}
-                </span>
-              </div>
-              <div>
-                <span className="flex flex-cols align-center gap-1">
-                  <Heart size={22}></Heart>
-                  {data.favourites_count}
-                </span>
-              </div>
-            </CardFooter>
-          </Card>
+          </div>
+          <div className="text-center">
+            Empty posts
+          </div>
+        </div>
         }
       </div>
-    </div>
+    </div >
   </>
-}
-
-
-const useEventSourcing = () => {
-  const [data, setData] = useState<Post | undefined>(undefined)
-  useLayoutEffect(() => {
-    const eventSource = new EventSource('http://localhost:8080/notifications/new');
-
-    // Listen for the default "message" event
-    eventSource.onmessage = (event) => {
-      console.log('Received:', event.data);
-      const data = JSON.parse(event.data) as Post
-      setData(data)
-      // Process the data
-    };
-
-    // Handle connection opened
-    eventSource.onopen = (event) => {
-      console.log('Connection established');
-    };
-
-    // Handle errors (including disconnections)
-    eventSource.onerror = (event) => {
-      console.error('EventSource error:', event);
-      // Browser will automatically attempt to reconnect
-    };
-
-  }, [])
-
-  return data
-  // Create a connection to the SSE endpoint
 }
