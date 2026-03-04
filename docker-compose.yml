@@ -38,6 +38,17 @@ services:
     volumes:
       - .dev/redis:/data
 
+  migrations:
+    image: tootsuite/mastodon:v4.5.7
+    env_file: .env.mastodon
+    command: rake db:prepare && rake db:migrate
+    depends_on:
+      db:
+        condition: service_started
+    networks:
+      - external_network
+      - internal_network
+
   web:
     image: tootsuite/mastodon:v4.5.7
     restart: always
@@ -49,8 +60,12 @@ services:
     ports:
       - '3001:3000'
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_started
+      redis:
+        condition: service_started
+      migrations:
+        condition: service_completed_successfully
     volumes:
       - .dev/public/system:/mastodon/public/system
 
@@ -64,8 +79,12 @@ services:
     ports:
       - '4000:4000'
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_started
+      redis:
+        condition: service_started
+      migrations:
+        condition: service_completed_successfully
 
   sidekiq:
     image: tootsuite/mastodon:v4.5.7
@@ -73,8 +92,12 @@ services:
     env_file: .env.mastodon
     command: bundle exec sidekiq
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_started
+      redis:
+        condition: service_started
+      migrations:
+        condition: service_completed_successfully
     networks:
       - external_network
       - internal_network
