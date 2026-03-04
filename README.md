@@ -20,7 +20,7 @@ protoc --go_out=. \
 ```
 git clone https://github.com/sembereka-paul/dispatch-core.git
 ```
-2. Run `go mod tidy`. It's optional to run it in `api` or `pub-sub` directories only.
+2. Run `go mod tidy` in all workspaces.
 3. Run `task backend:up` or (just `task`) to run `pub-sub` and `api` in parallel.
 3. `cd dashboard` to run the minimal ui. 
     - Run `npm ci` then `npm run dev` to run it in dev mode.

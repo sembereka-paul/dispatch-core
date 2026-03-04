@@ -24,17 +24,23 @@ tasks:
   pub-sub:up:
     deps: [build]
     cmds:
-      - go run ./pub-sub/main.go
+      - go build -o ./build/pub-sub ./pub-sub
+      - ./build/pub-sub
 
   api:up:
     deps: [build]
     cmds:
-      - go run ./api/*.go
+      - go build -o ./build/api ./api
+      - ./build/api
 
   backend:up:
     deps: [build]
     cmds:
       - task pub-sub:up api:up -p
+
+  test:
+    cmds:
+      - ./test.sh "task backend:up" "go test ./api -v"
 
   default:
     cmds:
