@@ -42,6 +42,11 @@ tasks:
     cmds:
       - ./test.sh "task backend:up" "go test ./api -v"
 
-  default:
+  dashboard:up:
     cmds:
-    - task backend:up
+    - npm --prefix dashboard run dev
+
+  default:
+    deps: [dev:spin]
+    cmds:
+    - task backend:up dashboard:up -p

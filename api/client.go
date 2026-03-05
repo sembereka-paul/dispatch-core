@@ -8,18 +8,19 @@ type Client struct {
 
 var (
 	Clients      = make(map[*Client]bool)
-	ClientsMutex sync.Mutex
+	ClientsMutex sync.RWMutex
 )
 
 func registerClient(client *Client) {
 	ClientsMutex.Lock()
+	defer ClientsMutex.Unlock()
 	Clients[client] = true
-	ClientsMutex.Unlock()
 }
 
 func unregisterClient(client *Client) {
 	ClientsMutex.Lock()
+	defer ClientsMutex.Unlock()
+
 	delete(Clients, client)
 	close(client.Channel)
-	ClientsMutex.Unlock()
 }

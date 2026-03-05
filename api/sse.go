@@ -24,11 +24,7 @@ func SSEHandler(c *gin.Context) {
 	registerClient(client)
 	defer unregisterClient(client)
 
-	camp := GetCampaign(id)
-	if camp == nil {
-		camp = &Campaign{id, map[*Client]bool{}}
-	}
-	TrackCampaign(camp, client)
+	camp := CampaignHandler(id, client)
 	defer camp.MaybeUntrack(client)
 
 	subTag <- id

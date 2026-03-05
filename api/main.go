@@ -23,12 +23,11 @@ type EventMessage struct {
 	tag   string `json:"tag"`
 }
 
-var eventMessage = make(chan EventMessage, 1)
-var subTag = make(chan string)
-
 var (
 	ENV = os.Getenv("ENV")
 )
+
+var subTag = make(chan string)
 
 func main() {
 	conn, err := grpc.NewClient(
@@ -37,12 +36,16 @@ func main() {
 	)
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
+		return
 	}
 	defer conn.Close()
 	c := pb.NewEventClient(conn)
+	eventMessage := make(chan EventMessage, 1)
+	defer close(eventMessage)
+	defer close(subTag)
 
-	go subscriptionsManager(c)
-	go messageDispatcher()
+	go subscriptionsManager(c, subTag, eventMessage)
+	go messageDispatcher(eventMessage)
 
 	r := gin.Default()
 
@@ -58,13 +61,13 @@ func main() {
 	r.Run(":8080")
 }
 
-func subscriptionsManager(connection pb.EventClient) {
+func subscriptionsManager(connection pb.EventClient, subTag <-chan string, eventMessage chan<- EventMessage) {
 	for subReq := range subTag {
 		log.Println("Attempt sub:", subReq)
 		go func(tag string) {
 			subscription := getSubscription(subReq)
 			if subscription == "" {
-				if err := sub(connection, tag); err != nil {
+				if err := sub(connection, tag, eventMessage); err != nil {
 					log.Println("sub error:", err)
 				}
 			}
@@ -72,7 +75,7 @@ func subscriptionsManager(connection pb.EventClient) {
 	}
 }
 
-func messageDispatcher() {
+func messageDispatcher(eventMessage <-chan EventMessage) {
 	for msg := range eventMessage {
 		log.Println("received:", msg)
 		camp := GetCampaign(msg.tag)

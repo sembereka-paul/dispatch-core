@@ -8,7 +8,7 @@ set -m
 eval "$setup" &
 bg=$!
 
-sleep 5
+sleep 30
 
 eval "$waitfor"
 # Make sure the background process is leader of its own group: use its PID as -pgid
