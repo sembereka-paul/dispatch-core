@@ -16,14 +16,19 @@ var (
 	CampaignsMutex sync.RWMutex
 )
 
-func TrackCampaign(campaign *Campaign, client *Client) {
+func CampaignHandler(tag string, client *Client) *Campaign {
 	CampaignsMutex.Lock()
 	defer CampaignsMutex.Unlock()
 
-	campaign.AddListener(client)
-	Campaigns[campaign.Id] = campaign
-	log.Println("Tracking campaign clients:", campaign.Id)
+	camp := Campaigns[tag]
+	if camp == nil {
+		camp = &Campaign{tag, map[*Client]bool{}}
+	}
 
+	camp.AddListener(client)
+	Campaigns[camp.Id] = camp
+	log.Println("Tracking campaign clients:", camp.Id)
+	return camp
 }
 
 func (campaign *Campaign) MaybeUntrack(client *Client) {
