@@ -13,20 +13,23 @@ type Campaign struct {
 
 var (
 	Campaigns      = make(map[string]*Campaign)
-	CampaignsMutex sync.Mutex
+	CampaignsMutex sync.RWMutex
 )
 
 func TrackCampaign(campaign *Campaign, client *Client) {
 	CampaignsMutex.Lock()
+	defer CampaignsMutex.Unlock()
+
 	campaign.AddListener(client)
 	Campaigns[campaign.Id] = campaign
-	CampaignsMutex.Unlock()
 	log.Println("Tracking campaign clients:", campaign.Id)
 
 }
 
 func (campaign *Campaign) MaybeUntrack(client *Client) {
 	CampaignsMutex.Lock()
+	defer CampaignsMutex.Unlock()
+
 	if len(campaign.Listeners) == 1 && campaign.Listeners[client] {
 
 		log.Println("Untracking campaign:", campaign.Id)
@@ -35,22 +38,21 @@ func (campaign *Campaign) MaybeUntrack(client *Client) {
 		log.Println("Untracking campaign clients:", campaign.Id)
 		delete(campaign.Listeners, client)
 	}
-	CampaignsMutex.Unlock()
 }
 
 func GetCampaign(id string) *Campaign {
-	var camp *Campaign
-	CampaignsMutex.Lock()
-	camp = Campaigns[id]
-	CampaignsMutex.Unlock()
-	return camp
+	CampaignsMutex.RLock()
+	defer CampaignsMutex.RUnlock()
+
+	return Campaigns[id]
 }
 func (campaign *Campaign) Broadcast(msg Message) {
-	ClientsMutex.Lock()
+	ClientsMutex.RLock()
+	defer ClientsMutex.RUnlock()
+
 	for client := range campaign.Listeners {
 		client.Channel <- msg
 	}
-	ClientsMutex.Unlock()
 }
 
 func (campaign *Campaign) AddListener(client *Client) {

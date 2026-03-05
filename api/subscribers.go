@@ -9,7 +9,7 @@ import (
 
 var (
 	subscriptions      = make(map[string]int)
-	subscriptionsMutex sync.Mutex
+	subscriptionsMutex sync.RWMutex
 )
 
 func addSubscription(name string) {
@@ -26,22 +26,28 @@ func addSubscription(name string) {
 }
 
 func getSubscription(name string) string {
+	subscriptionsMutex.RLock()
+	defer subscriptionsMutex.RUnlock()
+
 	sub := ""
-	subscriptionsMutex.Lock()
 	if count, ok := subscriptions[name]; ok && count > 0 {
 		sub = name
 	}
-	subscriptionsMutex.Unlock()
 	return sub
 }
 
+// tries to delee subscrion if users count drops to 0
+// otherwise justs decrements
 func maybeRemoveSubscription(name string) {
 	subscriptionsMutex.Lock()
-	if count, ok := subscriptions[name]; ok && (count-1) == 0 {
+	defer subscriptionsMutex.Unlock()
+
+	if count, ok := subscriptions[name]; ok && (count-1) <= 0 {
 		log.Println("Removing subsription:", name)
 		delete(subscriptions, name)
+	} else {
+		subscriptions[name] = count - 1
 	}
-	subscriptionsMutex.Unlock()
 }
 
 // subscribe
